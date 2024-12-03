@@ -22,7 +22,8 @@ pca = joblib.load('/home/tomas/IA_ML_Suricata/pca.pkl')
 trained_features = [
     "flow_id", "pcap_cnt", "src_ip", "src_port", "dest_ip", "dest_port", "proto",
     "dns.version", "dns.type", "dns.id", "dns.flags", "dns.qr", "dns.rd", "dns.ra",
-    "dns.rrname", "dns.rrtype", "dns.rcode", "dns.answers"
+    "dns.rrname", "dns.rrtype", "dns.rcode", "icmp_code", "icmp_type", 
+    "response_icmp_code", "response_icmp_type", "tx_id"
 ]
 
 # Function to log alert messages to a file
@@ -61,9 +62,15 @@ def extract_features(log_entry):
     features["dns.rrtype"] = dns.get("rrtype", np.nan)
     features["dns.rcode"] = dns.get("rcode", np.nan)
     
-    # Handle answers (if present)
-    answers = dns.get("answers", [])
-    features["dns.answers"] = len(answers) if answers else np.nan
+    # If there are no DNS answers, set to NaN
+    features["dns.answers"] = len(dns.get("answers", [])) if "answers" in dns else np.nan
+
+    # Other fields (handle missing icmp_code, icmp_type, etc.)
+    features["icmp_code"] = log_entry.get("icmp_code", np.nan)
+    features["icmp_type"] = log_entry.get("icmp_type", np.nan)
+    features["response_icmp_code"] = log_entry.get("response_icmp_code", np.nan)
+    features["response_icmp_type"] = log_entry.get("response_icmp_type", np.nan)
+    features["tx_id"] = log_entry.get("tx_id", np.nan)
 
     return features
 
