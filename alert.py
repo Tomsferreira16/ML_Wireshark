@@ -18,6 +18,9 @@ clf = joblib.load('/home/tomas/IA_ML_Suricata/isolation_forest_model.pkl')
 scaler = joblib.load('/home/tomas/IA_ML_Suricata/scaler.pkl')
 pca = joblib.load('/home/tomas/IA_ML_Suricata/pca.pkl')
 
+# Feature columns used during model training (set this to match your model's training features)
+trained_features = ['dest_port', 'flow_id', 'icmp_code', 'icmp_type', 'pcap_cnt', 'response_icmp_code', 'response_icmp_type', 'other_feature_1', 'other_feature_2']
+
 # Function to log alert messages to a file
 def log_alert(message):
     if not os.path.exists(alerts_file_path):
@@ -29,16 +32,16 @@ def log_alert(message):
 
 # Function to process Suricata logs and predict anomalies
 def process_log_entry(log_entry):
-    # Convert log entry to DataFrame (this assumes the log is a single dictionary or similar)
     try:
+        # Normalize the JSON log entry to a pandas DataFrame
         df = pd.json_normalize(log_entry)
-        
-        # Select relevant numerical features (ignoring non-numerical fields like 'timestamp' and 'signature')
-        df = df.select_dtypes(include=[np.number])
-        
-        # Handle missing or infinite values
+
+        # Select only the relevant features (ensure they match the features used during training)
+        df = df[trained_features] if all(feature in df.columns for feature in trained_features) else pd.DataFrame(columns=trained_features)
+
+        # Handle missing or infinite values by filling with zeros (or any default value)
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
-        df.fillna(df.mean(), inplace=True)
+        df.fillna(0, inplace=True)
 
         # Scale features and apply PCA
         df_scaled = scaler.transform(df)
