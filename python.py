@@ -1,30 +1,31 @@
+#!/usr/bin/env python3
 import pandas as pd
 import json
 import joblib
 
-def extract_features_from_eve(json_file):
-    with open(json_file) as f:
-        data = json.load(f)
-    
-    features = []
-    for entry in data:
-        if 'flow' in entry:
-            flow = entry['flow']
-            features.append({
-                'src_ip': entry.get('src_ip', None),
-                'src_port': entry.get('src_port', None),
-                'dst_ip': entry.get('dst_ip', None),
-                'dst_port': entry.get('dst_port', None),
-                'proto': entry.get('proto', None),
-                'flow_duration': flow.get('age', None),  # Assuming 'age' is the duration
-                'fwd_packets': flow.get('pkts_toserver', 0),
-                'bwd_packets': flow.get('pkts_toclient', 0),
-                'fwd_bytes': flow.get('bytes_toserver', 0),
-                'bwd_bytes': flow.get('bytes_toclient', 0),
-                'flow_bytes_per_second': flow.get('bytes_toserver', 0) / flow.get('age', 1)  # Basic calculation
-            })
-    
-    return pd.DataFrame(features)
+def extract_features_from_eve(file_path):
+    relevant_features = []
+    with open(file_path, 'r') as f:
+        for line in f:  # Read each line individually
+            try:
+                log_entry = json.loads(line)  # Parse each line as a separate JSON object
+                # Extract the fields you need from each log entry
+                relevant_features.append({
+                    'src_port': log_entry.get('src_port'),
+                    'dest_port': log_entry.get('dest_port'),
+                    'bytes_toserver': log_entry.get('flow', {}).get('bytes_toserver', 0),
+                    'bytes_toclient': log_entry.get('flow', {}).get('bytes_toclient', 0),
+                    'pkts_toserver': log_entry.get('flow', {}).get('pkts_toserver', 0),
+                    'pkts_toclient': log_entry.get('flow', {}).get('pkts_toclient', 0),
+                    'proto': log_entry.get('proto'),
+                    'flow_duration': log_entry.get('flow', {}).get('age', 0),
+                    # Add more fields as needed
+                })
+            except json.JSONDecodeError:
+                continue  # Skip invalid lines
+
+    return pd.DataFrame(relevant_features)
+
 
 # Extract features from the eve.json file
 eve_data = extract_features_from_eve('/path/to/eve.json')
