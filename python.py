@@ -12,7 +12,20 @@ def extract_features_from_eve(file_path):
         for line in file:
             data = json.loads(line.strip())
 
-            # Ensure the 'flow' object exists and extract relevant fields
+            # Initialize the features dictionary with missing fields set to 0
+            features = {
+                'Flow Duration': 0,
+                'Total Fwd Packets': 0,
+                'Total Backward Packets': 0,
+                'Total Length of Fwd Packets': 0,
+                'Total Length of Bwd Packets': 0,
+                'ACK Flag Count': 0,  # Placeholder for missing features
+                'Active Max': 0,      # Placeholder for missing features
+                'Active Mean': 0,     # Placeholder for missing features
+                'Active Min': 0,      # Placeholder for missing features
+                'Active Std': 0,      # Placeholder for missing features
+            }
+
             if 'flow' in data:
                 flow = data['flow']
 
@@ -22,14 +35,13 @@ def extract_features_from_eve(file_path):
                 duration = (end_time - start_time).total_seconds()
 
                 # Extract relevant flow data
-                features = {
-                    'Flow Duration': duration,
-                    'Total Fwd Packets': flow.get('pkts_toserver', 0),
-                    'Total Backward Packets': flow.get('pkts_toclient', 0),
-                    'Total Length of Fwd Packets': flow.get('bytes_toserver', 0),
-                    'Total Length of Bwd Packets': flow.get('bytes_toclient', 0),
-                }
-                features_list.append(features)
+                features['Flow Duration'] = duration
+                features['Total Fwd Packets'] = flow.get('pkts_toserver', 0)
+                features['Total Backward Packets'] = flow.get('pkts_toclient', 0)
+                features['Total Length of Fwd Packets'] = flow.get('bytes_toserver', 0)
+                features['Total Length of Bwd Packets'] = flow.get('bytes_toclient', 0)
+
+            features_list.append(features)
 
     # Create DataFrame from the list of dictionaries
     return pd.DataFrame(features_list)
