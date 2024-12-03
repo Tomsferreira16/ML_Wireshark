@@ -10,38 +10,54 @@ def extract_features_from_eve(file_path):
 
     with open(file_path, 'r') as file:
         for line in file:
-            data = json.loads(line.strip())
+            try:
+                data = json.loads(line.strip())
+                
+                # Initialize the features dictionary with missing fields set to 0
+                features = {
+                    'Flow Duration': 0,
+                    'Total Fwd Packets': 0,
+                    'Total Backward Packets': 0,
+                    'Total Length of Fwd Packets': 0,
+                    'Total Length of Bwd Packets': 0,
+                    'Packets/s': 0,
+                    'Bytes/s': 0,
+                    'ACK Flag Count': 0,  # Placeholder
+                    'SYN Flag Count': 0,  # New flag example
+                }
 
-            # Initialize the features dictionary with missing fields set to 0
-            features = {
-                'Flow Duration': 0,
-                'Total Fwd Packets': 0,
-                'Total Backward Packets': 0,
-                'Total Length of Fwd Packets': 0,
-                'Total Length of Bwd Packets': 0,
-                'ACK Flag Count': 0,  # Placeholder for missing features
-                'Active Max': 0,      # Placeholder for missing features
-                'Active Mean': 0,     # Placeholder for missing features
-                'Active Min': 0,      # Placeholder for missing features
-                'Active Std': 0,      # Placeholder for missing features
-            }
+                if 'flow' in data:
+                    flow = data['flow']
+                    # Extract start and end times
+                    start_time = datetime.strptime(flow.get('start', '1970-01-01T00:00:00.000000+0000'), "%Y-%m-%dT%H:%M:%S.%f%z")
+                    end_time = datetime.strptime(flow.get('end', '1970-01-01T00:00:00.000000+0000'), "%Y-%m-%dT%H:%M:%S.%f%z")
+                    duration = (end_time - start_time).total_seconds() or 1  # Avoid division by zero
+                    
+                    # Calculate flow metrics
+                    pkts_toserver = flow.get('pkts_toserver', 0)
+                    pkts_toclient = flow.get('pkts_toclient', 0)
+                    bytes_toserver = flow.get('bytes_toserver', 0)
+                    bytes_toclient = flow.get('bytes_toclient', 0)
+                    
+                    # Populate features
+                    features['Flow Duration'] = duration
+                    features['Total Fwd Packets'] = pkts_toserver
+                    features['Total Backward Packets'] = pkts_toclient
+                    features['Total Length of Fwd Packets'] = bytes_toserver
+                    features['Total Length of Bwd Packets'] = bytes_toclient
+                    features['Packets/s'] = (pkts_toserver + pkts_toclient) / duration
+                    features['Bytes/s'] = (bytes_toserver + bytes_toclient) / duration
 
-            if 'flow' in data:
-                flow = data['flow']
+                # Extract TCP flags if available
+                if 'tcp' in data:
+                    tcp = data['tcp']
+                    features['ACK Flag Count'] = 1 if tcp.get('ack', False) else 0
+                    features['SYN Flag Count'] = 1 if tcp.get('syn', False) else 0
 
-                # Calculate flow duration
-                start_time = datetime.strptime(flow['start'], "%Y-%m-%dT%H:%M:%S.%f%z")
-                end_time = datetime.strptime(flow['end'], "%Y-%m-%dT%H:%M:%S.%f%z")
-                duration = (end_time - start_time).total_seconds()
-
-                # Extract relevant flow data
-                features['Flow Duration'] = duration
-                features['Total Fwd Packets'] = flow.get('pkts_toserver', 0)
-                features['Total Backward Packets'] = flow.get('pkts_toclient', 0)
-                features['Total Length of Fwd Packets'] = flow.get('bytes_toserver', 0)
-                features['Total Length of Bwd Packets'] = flow.get('bytes_toclient', 0)
-
-            features_list.append(features)
+                features_list.append(features)
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Error processing line: {e}")
+                continue  # Skip invalid lines gracefully
 
     # Create DataFrame from the list of dictionaries
     return pd.DataFrame(features_list)
