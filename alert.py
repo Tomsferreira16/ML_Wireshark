@@ -34,6 +34,7 @@ def log_alert(message):
     
     with open(alerts_file_path, 'a') as file:
         file.write(f"{message}\n")
+        print(f"ALERT: {message}")
 
 # Function to extract relevant features from a Suricata log entry
 def extract_features(log_entry):
@@ -104,7 +105,7 @@ def process_log_entry(log_entry):
         
         # Convert prediction to binary (1 for anomaly, 0 for normal)
         if y_pred == -1:  # If it's an anomaly
-            log_alert("Anomaly detected in Suricata log entry!")
+            log_alert(f"Anomaly detected: {log_entry}")
             return True  # Return True to indicate an anomaly
         else:
             return False  # Return False if no anomaly
