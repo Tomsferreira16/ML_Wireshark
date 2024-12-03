@@ -18,8 +18,12 @@ clf = joblib.load('/home/tomas/IA_ML_Suricata/isolation_forest_model.pkl')
 scaler = joblib.load('/home/tomas/IA_ML_Suricata/scaler.pkl')
 pca = joblib.load('/home/tomas/IA_ML_Suricata/pca.pkl')
 
-# Feature columns used during model training (set this to match your model's training features)
-trained_features = ['dest_port', 'flow_id', 'icmp_code', 'icmp_type', 'pcap_cnt', 'response_icmp_code', 'response_icmp_type', 'other_feature_1', 'other_feature_2']
+# Features used during model training (make sure these match your model's training features)
+trained_features = [
+    "flow_id", "pcap_cnt", "src_ip", "src_port", "dest_ip", "dest_port", "proto",
+    "dns.version", "dns.type", "dns.id", "dns.flags", "dns.qr", "dns.rd", "dns.ra",
+    "dns.rrname", "dns.rrtype", "dns.rcode", "dns.answers"
+]
 
 # Function to log alert messages to a file
 def log_alert(message):
@@ -30,14 +34,55 @@ def log_alert(message):
     with open(alerts_file_path, 'a') as file:
         file.write(f"{message}\n")
 
+# Function to extract relevant features from a Suricata log entry
+def extract_features(log_entry):
+    # Initialize an empty dictionary for the features
+    features = {}
+
+    # Extract relevant fields (assuming they are present in the log entry)
+    features["flow_id"] = log_entry.get("flow_id", np.nan)
+    features["pcap_cnt"] = log_entry.get("pcap_cnt", np.nan)
+    features["src_ip"] = log_entry.get("src_ip", np.nan)
+    features["src_port"] = log_entry.get("src_port", np.nan)
+    features["dest_ip"] = log_entry.get("dest_ip", np.nan)
+    features["dest_port"] = log_entry.get("dest_port", np.nan)
+    features["proto"] = log_entry.get("proto", np.nan)
+    
+    # DNS-related fields (ensure to handle missing data)
+    dns = log_entry.get("dns", {})
+    features["dns.version"] = dns.get("version", np.nan)
+    features["dns.type"] = dns.get("type", np.nan)
+    features["dns.id"] = dns.get("id", np.nan)
+    features["dns.flags"] = dns.get("flags", np.nan)
+    features["dns.qr"] = dns.get("qr", np.nan)
+    features["dns.rd"] = dns.get("rd", np.nan)
+    features["dns.ra"] = dns.get("ra", np.nan)
+    features["dns.rrname"] = dns.get("rrname", np.nan)
+    features["dns.rrtype"] = dns.get("rrtype", np.nan)
+    features["dns.rcode"] = dns.get("rcode", np.nan)
+    
+    # Handle answers (if present)
+    answers = dns.get("answers", [])
+    features["dns.answers"] = len(answers) if answers else np.nan
+
+    return features
+
 # Function to process Suricata logs and predict anomalies
 def process_log_entry(log_entry):
     try:
-        # Normalize the JSON log entry to a pandas DataFrame
-        df = pd.json_normalize(log_entry)
+        # Extract features from the log entry
+        features = extract_features(log_entry)
 
-        # Select only the relevant features (ensure they match the features used during training)
-        df = df[trained_features] if all(feature in df.columns for feature in trained_features) else pd.DataFrame(columns=trained_features)
+        # Convert the extracted features into a DataFrame
+        df = pd.DataFrame([features])
+
+        # Ensure the correct features are available, if any are missing, fill with NaN or 0
+        missing_features = set(trained_features) - set(df.columns)
+        for feature in missing_features:
+            df[feature] = np.nan
+        
+        # Reorder columns to match the trained model features
+        df = df[trained_features]
 
         # Handle missing or infinite values by filling with zeros (or any default value)
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
