@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import pandas as pd
 import numpy as np
 import os
@@ -8,7 +9,7 @@ from sklearn.decomposition import PCA
 import joblib
 
 # Folder path containing all JSON files
-folder_path = "ML_dataset_JSON/"
+folder_path = "/home/tomas/IA_ML_Suricata"
 
 # Step 1: Loading JSON files
 print("Step 1: Loading JSON files...")
@@ -55,12 +56,6 @@ clf.fit(df_scaled_pca)  # Fit the model with the data
 print("Step 7: Predicting anomalies...")
 y_pred = clf.predict(df_scaled_pca)
 y_pred = (y_pred == -1).astype(int)  # Convert predictions to binary (1 for anomaly, 0 for normal)
-
-# Step 8: Save the trained model, scaler, and PCA
-print("Saving the trained model...")
-joblib.dump(clf, 'isolation_forest_model.pkl')
-joblib.dump(scaler, 'scaler.pkl')
-joblib.dump(pca, 'pca.pkl')
 
 print("Process complete!")
 
