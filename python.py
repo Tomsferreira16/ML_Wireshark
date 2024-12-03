@@ -1,53 +1,60 @@
 #!/usr/bin/env python3
-import pandas as pd
 import json
+import pandas as pd
 import joblib
+from datetime import datetime
 
+# Function to load and parse eve.json and extract relevant features
 def extract_features_from_eve(file_path):
-    relevant_features = []
-    with open(file_path, 'r') as f:
-        for line in f:  # Read each line individually
-            try:
-                log_entry = json.loads(line)  # Parse each line as a separate JSON object
-                # Extract the fields you need from each log entry
-                relevant_features.append({
-                    'src_port': log_entry.get('src_port'),
-                    'dest_port': log_entry.get('dest_port'),
-                    'bytes_toserver': log_entry.get('flow', {}).get('bytes_toserver', 0),
-                    'bytes_toclient': log_entry.get('flow', {}).get('bytes_toclient', 0),
-                    'pkts_toserver': log_entry.get('flow', {}).get('pkts_toserver', 0),
-                    'pkts_toclient': log_entry.get('flow', {}).get('pkts_toclient', 0),
-                    'proto': log_entry.get('proto'),
-                    'flow_duration': log_entry.get('flow', {}).get('age', 0),
-                    # Add more fields as needed
-                })
-            except json.JSONDecodeError:
-                continue  # Skip invalid lines
+    features_list = []
 
-    return pd.DataFrame(relevant_features)
+    with open(file_path, 'r') as file:
+        for line in file:
+            data = json.loads(line.strip())
 
+            # Ensure the 'flow' object exists and extract relevant fields
+            if 'flow' in data:
+                flow = data['flow']
 
-# Extract features from the eve.json file
-eve_data = extract_features_from_eve('/path/to/eve.json')
+                # Calculate flow duration
+                start_time = datetime.strptime(flow['start'], "%Y-%m-%dT%H:%M:%S.%f%z")
+                end_time = datetime.strptime(flow['end'], "%Y-%m-%dT%H:%M:%S.%f%z")
+                duration = (end_time - start_time).total_seconds()
 
-# Apply the scaler and PCA from saved models
+                # Extract relevant flow data
+                features = {
+                    'Flow Duration': duration,
+                    'Total Fwd Packets': flow.get('pkts_toserver', 0),
+                    'Total Backward Packets': flow.get('pkts_toclient', 0),
+                    'Total Length of Fwd Packets': flow.get('bytes_toserver', 0),
+                    'Total Length of Bwd Packets': flow.get('bytes_toclient', 0),
+                }
+                features_list.append(features)
+
+    # Create DataFrame from the list of dictionaries
+    return pd.DataFrame(features_list)
+
+# Load the pre-trained model, scaler, and PCA
 scaler = joblib.load('scaler.pkl')
 pca = joblib.load('pca.pkl')
+model = joblib.load('isolation_forest_model.pkl')
 
-eve_data_scaled = scaler.transform(eve_data)  # Scaling the data
-eve_data_pca = pca.transform(eve_data_scaled)  # Applying PCA
+# Extract features from eve.json
+df_eve = extract_features_from_eve('/var/log/suricata/eve.json')
 
-# Load your trained model
-clf = joblib.load('isolation_forest_model.pkl')
+# Scale and transform the new data
+df_scaled = scaler.transform(df_eve)
+df_pca = pca.transform(df_scaled)
 
-# Predict anomalies
-predictions = clf.predict(eve_data_pca)
+# Make predictions using the trained model
+predictions = model.predict(df_pca)
+anomalies = (predictions == -1).astype(int)  # 1 for anomaly, 0 for normal
 
-# Anomaly prediction (1 for anomaly, 0 for benign)
-alerts = ['Bad detected' if pred == -1 else 'Benign' for pred in predictions]
+# Write detected anomalies to the alert file
+alert_file = '/home/tomas/IA_ML_Suricata/alerts.log'
+with open(alert_file, 'a') as file:
+    for index, anomaly in enumerate(anomalies):
+        if anomaly:
+            file.write(f"Anomaly detected in flow {index}!\n")
 
-# Write alerts to a file
-with open('/home/tomas/IA_ML_Suricata/alerts.txt', 'a') as f:
-    for alert in alerts:
-        f.write(f"{alert}\n")
-
+print("Anomaly detection completed. Alerts written to:", alert_file)
