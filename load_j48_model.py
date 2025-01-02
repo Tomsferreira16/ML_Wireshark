@@ -5,7 +5,7 @@ import pandas as pd
 model = joblib.load("j48_model.pkl")
 
 # Load the new data (ensure this file exists)
-file_path = "new_data.csv"  # Replace with the path to your new data file
+file_path = "clean_csv_files/updated_brute_force.csv"  # Replace with the path to your new data file
 data = pd.read_csv(file_path)
 
 # Ensure all required columns are present
