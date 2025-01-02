@@ -11,7 +11,7 @@ import time
 # Parameters for continuous packet capture
 capture_duration = 60  # Capture for 60 seconds, adjust as needed
 interface = "eth0"  # Replace with your network interface (e.g., eth0, wlan0)
-pcap_output_dir = "/path/to/save/pcap_files/"  # Directory to save pcap files
+pcap_output_dir = "/home/tomas/Desktop"  # Directory to save pcap files
 
 # Function to start the packet capture and save it to a pcap file
 def capture_packets():
