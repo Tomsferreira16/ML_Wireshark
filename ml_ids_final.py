@@ -34,17 +34,18 @@ def capture_packets():
 # Step 1: Capture and convert pcap to CSV using tshark
 def convert_pcap_to_csv(pcap_file):
     output_csv = pcap_file.replace(".pcap", ".csv")
-    tshark_cmd = [
-        "tshark", "-r", pcap_file, "-T", "fields", "-E", "header=y", "-E", "separator=,", "-E", "quote=d", "-E", "occurrence=f",
-        "-e", "ip.src", "-e", "ip.dst", "-e", "ip.len", "-e", "ip.flags.df", "-e", "ip.flags.mf", "-e", "ip.fragment", 
-        "-e", "ip.fragment.count", "-e", "ip.fragments", "-e", "ip.ttl", "-e", "ip.proto", "-e", "tcp.window_size", 
-        "-e", "tcp.ack", "-e", "tcp.seq", "-e", "tcp.len", "-e", "tcp.stream", "-e", "tcp.urgent_pointer", "-e", "tcp.flags",
-        "-e", "tcp.analysis.ack_rtt", "-e", "tcp.segments", "-e", "tcp.reassembled.length", "-e", "http.request", "-e", "udp.port", 
-        "-e", "frame.time_relative", "-e", "frame.time_delta", "-e", "tcp.time_relative", "-e", "tcp.time_delta"
-    ]
+    tshark_cmd = (
+        f"tshark -r {pcap_file} -T fields -E header=y -E separator=, -E quote=d -E occurrence=f "
+        "-e ip.src -e ip.dst -e ip.len -e ip.flags.df -e ip.flags.mf -e ip.fragment "
+        "-e ip.fragment.count -e ip.fragments -e ip.ttl -e ip.proto -e tcp.window_size "
+        "-e tcp.ack -e tcp.seq -e tcp.len -e tcp.stream -e tcp.urgent_pointer -e tcp.flags "
+        "-e tcp.analysis.ack_rtt -e tcp.segments -e tcp.reassembled.length -e http.request -e udp.port "
+        "-e frame.time_relative -e frame.time_delta -e tcp.time_relative -e tcp.time_delta "
+        f"> {output_csv}"
+    )
 
     try:
-        subprocess.run(tshark_cmd, check=True)
+        subprocess.run(tshark_cmd, check=True, shell=True)
         print(f"PCAP convertido para CSV: {output_csv}")
     except subprocess.CalledProcessError as e:
         print(f"Erro ao converter o pcap para CSV: {e}")
