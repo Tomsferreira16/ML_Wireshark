@@ -70,7 +70,7 @@ def clean_csv(filename):
         update_file['tcp.flags'] = update_file['tcp.flags'].apply(lambda x: int(str(x), 16) if pd.notnull(x) else 0)
 
         # Salva o DataFrame atualizado em um novo ficheiro
-        output_filename = 'updated_' + filename
+        output_filename = os.path.join(os.path.dirname(filename), 'updated_' + os.path.basename(filename))
         update_file.to_csv(output_filename, index=False)
         print(f"Ficheiro atualizado salvo como: {output_filename}")
         return output_filename
