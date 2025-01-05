@@ -7,6 +7,10 @@ import pandas as pd
 import joblib
 import ipaddress
 import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Parameters for continuous packet capture
 capture_duration = 60  # Capture for 60 seconds, adjust as needed
@@ -24,9 +28,9 @@ def capture_packets():
 
     try:
         subprocess.run(capture_cmd, check=True)
-        print(f"Pacotes capturados e salvos em {pcap_file}")
+        logging.info(f"Pacotes capturados e salvos em {pcap_file}")
     except subprocess.CalledProcessError as e:
-        print(f"Erro ao capturar pacotes: {e}")
+        logging.error(f"Erro ao capturar pacotes: {e}")
         sys.exit(1)
 
     return pcap_file
@@ -46,9 +50,9 @@ def convert_pcap_to_csv(pcap_file):
 
     try:
         subprocess.run(tshark_cmd, check=True, shell=True)
-        print(f"PCAP convertido para CSV: {output_csv}")
+        logging.info(f"PCAP convertido para CSV: {output_csv}")
     except subprocess.CalledProcessError as e:
-        print(f"Erro ao converter o pcap para CSV: {e}")
+        logging.error(f"Erro ao converter o pcap para CSV: {e}")
         sys.exit(1)
 
     return output_csv
@@ -72,10 +76,10 @@ def clean_csv(filename):
         # Salva o DataFrame atualizado em um novo ficheiro
         output_filename = os.path.join(os.path.dirname(filename), 'updated_' + os.path.basename(filename))
         update_file.to_csv(output_filename, index=False)
-        print(f"Ficheiro atualizado salvo como: {output_filename}")
+        logging.info(f"Ficheiro atualizado salvo como: {output_filename}")
         return output_filename
     except Exception as e:
-        print(f"Erro ao limpar o ficheiro CSV: {e}")
+        logging.error(f"Erro ao limpar o ficheiro CSV: {e}")
         sys.exit(1)
 
 # Step 3: Use the cleaned data for prediction
@@ -112,9 +116,9 @@ def predict_with_model(data_file):
         output_path = "predicted_data.csv"
         data.to_csv(output_path, index=False)
 
-        print(f"Previsões salvas em {output_path}")
+        logging.info(f"Previsões salvas em {output_path}")
     except Exception as e:
-        print(f"Erro ao realizar previsões: {e}")
+        logging.error(f"Erro ao realizar previsões: {e}")
         sys.exit(1)
 
 # Main execution
@@ -132,5 +136,5 @@ if __name__ == "__main__":
         predict_with_model(cleaned_file)
 
         # Wait for a short duration before capturing again (e.g., 60 seconds)
-        print("\nAguardando antes da próxima captura...\n")
+        logging.info("\nAguardando antes da próxima captura...\n")
         time.sleep(60)  # Adjust the sleep time as needed
